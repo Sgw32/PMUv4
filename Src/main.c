@@ -48,10 +48,14 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef hdma_usart3_rx;
+DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
+uint8_t transmitBuffer[1];
+uint8_t receiveBuffer[1];
 //cooler
 #define COOLER_PWM_OFF 800
 #define COOLER_PWM_DUTY 1100//14 A
@@ -95,6 +99,10 @@ typedef struct{
 	float temp;
 
 	float pot;
+
+	float smoothCurrent;
+	float chgCurrSmooth;
+	float cap;
 
 }Param_Struct;
 Param_Struct in;
@@ -154,6 +162,17 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+//#define SAINQUAKE
+
+void pushValuesToOldSES()
+{
+	bat=val.u_bat;
+	smoothCurrent=val.smoothCurrent;
+	cap=val.cap;
+	chgCurrSmooth=val.chgCurrSmooth;
+
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance==TIM2) //check if the interrupt comes from TIM3
@@ -185,7 +204,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		avg.pot = (avg.pot*199.0 + val.pot)/200.0;
 		//
 		state.charged = avg.u_bat>4.1*6;
+#ifdef SAINQUAKE
 		state.startDVS = avg.pot>50;
+#else
+		state.startDVS = startDvs>0;
+		val.smoothCurrent = ( val.smoothCurrent*9 + val.current )/10;
+		val.chgCurrSmooth = ( avg.current_sense*3120.0/4095.0)/10.0 - 165.62;
+		val.cap += val.current/200/3600;
+		pushValuesToOldSES();
+#endif
 		state.coolerEnabled = avg.temp>40.0;
 		state.coolerRegulated = avg.temp>60.0;
 		state.generateing = avg.current_sense>5;
@@ -249,9 +276,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 int main(void)
 {
-	uint8_t transmitBuffer[1];
-	uint8_t receiveBuffer[1];
+
   /* USER CODE BEGIN 1 */
+
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -284,18 +311,18 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  HAL_Delay(100);
+  HAL_UART_Receive_DMA(&huart3, receiveBuffer, 1);
   while (1)
   {
   /* USER CODE END WHILE */
-  /* USER CODE BEGIN 3 */
-	  while (HAL_UART_Receive(&huart3, receiveBuffer, 1,1000)==HAL_TIMEOUT)
-	  {
-	  }
 
-	  UART0_emulate_isr(1,receiveBuffer[0],huart3);
+  /* USER CODE BEGIN 3 */
+
 	  processReadUART();
-	  processWriteUART();
-	  UART0_emulate_isr(0,0,huart3);
+	  processWriteUART(huart3);
+	  //UART0_emulate_isr(0,0,huart3);
 	  /*uint8_t str[]="USART Transmit\r\n";
 	  HAL_UART_Transmit(&huart3,str,16,0xFFFF);
 	  HAL_Delay(100);*/
@@ -594,6 +621,12 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  /* DMA1_Channel3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
 
 }
 
@@ -642,6 +675,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+ /* here we consume the current value of rxChar */
+ UART0_emulate_isr(1,receiveBuffer[0],huart3);
+ /* set up to receive another char */
+ HAL_UART_Receive_DMA(&huart3, &receiveBuffer, 1);
+}
 
 /* USER CODE END 4 */
 

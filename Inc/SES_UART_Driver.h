@@ -22,7 +22,7 @@ char SteckPoint;
 float chgCurrent;
 float chgCurrSmooth;
 float maxChg;
-float temperature;
+float temperature=25;
 //unsigned int time;
 
 float injector_pwm = INJECTOR_MIN;//1640
@@ -56,70 +56,72 @@ char rst_src, rst_count=0;
 //UART 8051 emulate
 char TI0;
 
-void processWriteUART()
+void processWriteUART(UART_HandleTypeDef huart3)
 {
 	int i;
 	if(flRun)
-			{
-				flRun = 0;
-			}
-			//	rgAnswer = 1;
-			if(flTransmiter)
-			;
-			else
-			{
-				if(rgAnswer == 1)
-				{
-					rgAnswer = 0;
+	{
+		flRun = 0;
+	}
+	//	rgAnswer = 1;
+	if(flTransmiter)
+	;
+	else
+	{
+		if(rgAnswer == 1)
+		{
+			rgAnswer = 0;
 
-					BufferInModem[0] = 1 | 0x40;
-					OutModem2( 100*bat, 1);
-					OutModem2( 10*smoothCurrent, 3);
-					OutModem2( 10*cap, 5);
-					OutModem1( 4 | (char)flMem , 7);
-					OutModem1( rst_src , 8);
-					OutModem1( rst_count , 9);
+			BufferInModem[0] = 1 | 0x40;
+			OutModem2( 100*bat, 1);
+			OutModem2( 10*smoothCurrent, 3);
+			OutModem2( 10*cap, 5);
+			OutModem1( 4 | (char)flMem , 7);
+			OutModem1( rst_src , 8);
+			OutModem1( rst_count , 9);
 
-					BufferInModem[10] = 0;
-					for (i = 0; i < 10; i++ )
-						BufferInModem[10] = BufferInModem[10] ^ BufferInModem[i];
-					OutModem1(BufferInModem[10], 10);
-					BufferInModem[11] = 0;
-					r0 = 0;
-					rk = 11;
+			BufferInModem[10] = 0;
+			for (i = 0; i < 10; i++ )
+				BufferInModem[10] = BufferInModem[10] ^ BufferInModem[i];
+			OutModem1(BufferInModem[10], 10);
+			BufferInModem[11] = 0;
+			r0 = 0;
+			rk = 11;
 
-					flTransmiter = 1;
-					//SFRPAGE = UART0_PAGE;
-					TI0 = 1;
-				}
-				if(rgAnswer == 4)
-				{
-					rgAnswer = 0;
+			HAL_UART_Transmit_DMA(&huart3, BufferInModem, 12);
+			//flTransmiter = 1;
+			//SFRPAGE = UART0_PAGE;
+			//TI0 = 1;
+		}
+		if(rgAnswer == 4)
+		{
+			rgAnswer = 0;
 
-					BufferInModem[0] = 4 | 0x40;
-					OutModem2( 100*bat, 1);
-					OutModem2( 10*smoothCurrent, 3);
-					OutModem2( 10*cap, 5);
-					OutModem2( 100*chgCurrSmooth, 7);
-					OutModem2( 10*temperature, 9);
-					OutModem2( injector_pwm, 11);
-					OutModem1( startDvs , 13);
-					OutModem1( rst_src , 14);
-					OutModem1( rst_count , 15);
+			BufferInModem[0] = 4 | 0x40;
+			OutModem2( 100*bat, 1);
+			OutModem2( 10*smoothCurrent, 3);
+			OutModem2( 10*cap, 5);
+			OutModem2( 100*chgCurrSmooth, 7);
+			OutModem2( 10*temperature, 9);
+			OutModem2( injector_pwm, 11);
+			OutModem1( startDvs , 13);
+			OutModem1( rst_src , 14);
+			OutModem1( rst_count , 15);
 
-					BufferInModem[16] = 0;
-					for (i = 0; i < 16; i++ )
-					BufferInModem[16] = BufferInModem[16] ^ BufferInModem[i];
-					OutModem1(BufferInModem[16], 16);
-					BufferInModem[17] = 0;
-					r0 = 0;
-					rk = 17;
+			BufferInModem[16] = 0;
+			for (i = 0; i < 16; i++ )
+			BufferInModem[16] = BufferInModem[16] ^ BufferInModem[i];
+			OutModem1(BufferInModem[16], 16);
+			BufferInModem[17] = 0;
+			r0 = 0;
+			rk = 17;
 
-					flTransmiter = 1;
-					//SFRPAGE = UART0_PAGE;
-					TI0 = 1;
-				}
-			}
+			HAL_UART_Transmit_DMA(&huart3, BufferInModem, 17);
+			//flTransmiter = 1;
+			//SFRPAGE = UART0_PAGE;
+			//TI0 = 1;
+		}
+	}
 }
 
 void processReadUART()
@@ -204,7 +206,7 @@ unsigned char UART0_emulate_isr(char RI0,unsigned char SBUF0,UART_HandleTypeDef 
 		}
 		RI0 = 0;
 	}
-	if (TI0)  //-------TX Set Byte-------//
+	/*if (TI0)  //-------TX Set Byte-------//
 	{
 		if(r0 < rk)
 		{
@@ -215,7 +217,7 @@ unsigned char UART0_emulate_isr(char RI0,unsigned char SBUF0,UART_HandleTypeDef 
 		flTransmiter = 0;
 
 		TI0 = 0;
-	}
+	}*/
 	return SBUF1;
 }
 
