@@ -37,6 +37,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 #include <math.h>
+#include "SES_UART_Driver.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -45,6 +46,8 @@ DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+
+UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
@@ -140,6 +143,7 @@ static void MX_DMA_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_USART3_UART_Init(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
                                 
@@ -245,7 +249,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 int main(void)
 {
-
+	uint8_t transmitBuffer[1];
+	uint8_t receiveBuffer[1];
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
 
@@ -263,6 +268,7 @@ int main(void)
   MX_TIM3_Init();
   MX_ADC1_Init();
   MX_TIM2_Init();
+  MX_USART3_UART_Init();
 
   /* USER CODE BEGIN 2 */
   state.init = true;
@@ -281,8 +287,18 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
-
   /* USER CODE BEGIN 3 */
+	  while (HAL_UART_Receive(&huart3, receiveBuffer, 1,1000)==HAL_TIMEOUT)
+	  {
+	  }
+
+	  UART0_emulate_isr(1,receiveBuffer[0],huart3);
+	  processReadUART();
+	  processWriteUART();
+	  UART0_emulate_isr(0,0,huart3);
+	  /*uint8_t str[]="USART Transmit\r\n";
+	  HAL_UART_Transmit(&huart3,str,16,0xFFFF);
+	  HAL_Delay(100);*/
   }
   /* USER CODE END 3 */
 
@@ -544,6 +560,25 @@ static void MX_TIM3_Init(void)
   }
 
   HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/* USART3 init function */
+static void MX_USART3_UART_Init(void)
+{
+
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 57600;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
 }
 
