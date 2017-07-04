@@ -17,6 +17,8 @@ float smoothCurrent;
 float smoothCurrentMax;
 float Wh;
 
+float rpm;
+
 float cap;
 char SteckPoint;
 float chgCurrent;
@@ -121,6 +123,35 @@ void processWriteUART(UART_HandleTypeDef huart3)
 			//SFRPAGE = UART0_PAGE;
 			//TI0 = 1;
 		}
+        if(rgAnswer == 7)
+		{
+			rgAnswer = 0;
+
+			BufferInModem[0] = 7 | 0x40;
+			OutModem2( 100*bat, 1);
+			OutModem2( 10*smoothCurrent, 3);
+			OutModem2( 10*cap, 5);
+			OutModem2( 100*chgCurrSmooth, 7);
+			OutModem2( 10*temperature, 9);
+			OutModem2( injector_pwm, 11);
+			OutModem1( startDvs , 13);
+			OutModem1( rst_src , 14);
+			OutModem1( rst_count , 15);
+            OutModem1( rpm , 16);
+
+			BufferInModem[17] = 0;
+			for (i = 0; i < 17; i++ )
+			BufferInModem[17] = BufferInModem[17] ^ BufferInModem[i];
+			OutModem1(BufferInModem[17], 17);
+			BufferInModem[18] = 0;
+			r0 = 0;
+			rk = 18;
+
+			HAL_UART_Transmit_DMA(&huart3, BufferInModem, 18);
+			//flTransmiter = 1;
+			//SFRPAGE = UART0_PAGE;
+			//TI0 = 1;
+		}
 	}
 }
 
@@ -169,6 +200,10 @@ void processReadUART()
 			{
 				rgAnswer = 6;
 				injector_pwm-=10;
+			}
+            if (NPackage == 7)//ICE injector --
+			{
+				rgAnswer = 7; //Telemetry with RPM
 			}
 			/*if (NPackage == 8)//ICE debug
 			{

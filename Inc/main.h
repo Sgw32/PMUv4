@@ -47,6 +47,12 @@
 #define A1_GPIO_Port GPIOC
 #define A2_Pin GPIO_PIN_3
 #define A2_GPIO_Port GPIOC
+#define PA1_and_PA2_for_Tacho_Pin GPIO_PIN_1
+#define PA1_and_PA2_for_Tacho_GPIO_Port GPIOA
+#define PA1_and_PA2_for_Tacho_EXTI_IRQn EXTI1_IRQn
+#define PA1_and_PA2_for_TachoA2_Pin GPIO_PIN_2
+#define PA1_and_PA2_for_TachoA2_GPIO_Port GPIOA
+#define PA1_and_PA2_for_TachoA2_EXTI_IRQn EXTI2_IRQn
 #define SENSE_CENTER_Pin GPIO_PIN_4
 #define SENSE_CENTER_GPIO_Port GPIOA
 #define CURRENT_SENSE_Pin GPIO_PIN_5
